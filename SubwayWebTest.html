@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<meta charset="UTF-8">
+		<title>지하철 좌석 알림</title>
+		<script>
+			const ws = new WebSocket('ws://localhost:8080');
+
+			ws.onmessage = (event) => {
+				let seats = event.data.split(",");
+
+				if(seats.length >= 4){
+					
+					for(let i = 0; i < seats.length; i++){
+						document.getElementById("seat" +i).style.backgroundColor = (seats[i] == "1") ? "red" : "green";
+					}
+				} else {
+					console.error("잘못된 데이터 형식 : ", event.data);
+				}	
+			};
+		</script>
+	</head>
+
+	<body>
+		<h2>지하철 좌석 알림 시스템</h2>
+		<div id = "seat0" style = "width:50px;height:50px;background:green;display:inline-block;margin:5px;"></div>
+		<div id = "seat1" style = "width:50px;height:50px;background:green;display:inline-block;margin:5px;"></div>
+		<div id = "seat2" style = "width:50px;height:50px;background:green;display:inline-block;margin:5px;"></div>
+		<div id = "seat3" style = "width:50px;height:50px;background:green;display:inline-block;margin:5px;"></div>
+	</body>
+</html>
