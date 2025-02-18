@@ -61,12 +61,10 @@ float GetDistance()
     delayMicroseconds(10);
     digitalWrite(TRIG, LOW);
 
-    while (digitalRead(ECHO) == LOW)
-        ;
+    while (digitalRead(ECHO) == LOW);
     gettimeofday(&start, NULL);
 
-    while (digitalRead(ECHO) == HIGH)
-        ;
+    while (digitalRead(ECHO) == HIGH);
     gettimeofday(&stop, NULL);
 
     elapsed_time = (stop.tv_sec - start.tv_sec) * 1000000 + (stop.tv_usec - start.tv_usec);
@@ -88,7 +86,7 @@ float GetTemperature()
 	// 요청 신호 보내기
 	pinMode(TEMP, OUTPUT);
 	digitalWrite(TEMP, LOW); 
-    delay(20);	// 센서를 사용하기 위해 18ms 동안 LOW신호 보냄
+    delay(20);	// 센서를 사용하기 위해 20ms 동안 LOW신호 보냄
     digitalWrite(TEMP, HIGH);
 	delayMicroseconds(40);  // HIGH 상태를 40마이크로초 동안 유지
     
@@ -138,24 +136,46 @@ int main()
     SetUp();
     while (1)
     {
+		struct timeval start_time, end_time;
+		gettimeofday(&start_time, NULL); // 시작 시간 측정
+		
         float distance = GetDistance();
         float temperature = GetTemperature();
 
-        printf("Distance : %.2f cm | Temperature : %.1f \n", distance, temperature);
+		// 디버깅 메세지로 출력, 버퍼로 인해 printf문으로 사용할 시 같이 Node로 넘어가기에 오류가 발생함
+		// 터미널에서 stderr 로그 출력
+        fprintf(stderr, "Distance : %.2f cm | Temperature : %.1f \n", distance, temperature);
+        
+        // 센서 데이터값 0과1로 표현
+        int seat_data = (distance < 20.0 && temperature > 30.0) ? 1 : 0;
+        
+        // Node에서 실시간으로 읽을 수 있게 설정
+        printf("{\"seat\" : %d}\n", seat_data); // JSON
+        fflush(stdout);     // 버퍼를 즉시 비우면서 출력을 강제로 수행 -> printf문 전부 출력
 
-        if (distance < 20.0 && temperature > 30.0)
+        if (seat_data == 1)
         {
             digitalWrite(LED_RED, HIGH);
             digitalWrite(LED_GREEN, LOW);
-            delay(500);
         }
         else
         {
             digitalWrite(LED_RED, LOW);
-            digitalWrite(LED_GREEN, HIGH);
-            delay(500);
+            digitalWrite(LED_GREEN, HIGH);           
         }
-        sleep(1); // delay(1000);
-    }
+        
+        gettimeofday(&end_time, NULL); // 끝난 시간 측정
+        
+        // 수행 시간 계산 (마이크로초 -> 초 변환)
+        long elapsed_time = (end_time.tv_sec - start_time.tv_sec) * 1000000 + 
+                            (end_time.tv_usec - start_time.tv_usec);
+        long remaining_time = 5000000 - elapsed_time; // 5초 
+        
+        // 남은 시간이 있으면 sleep
+        if (remaining_time > 0)
+        {
+			usleep(remaining_time); // 5초에서 실행 시간을 뺀 만큼 대기
+        }
+	}
     return 0;
 }

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<meta charset="UTF-8">
+		<title>지하철 좌석 알림</title>
+		<style>
+			body {font-family: Arial, sans-serif; text-align: center;}
+			.seat-container {display: flex; justify-content: center; gap: 10px; margin-top: 20px;}
+			.seat {width: 100px; height: 100px; border-radius: 10px; font-size: 18px; 
+			display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;}
+            .empty { background-color: green; }
+            .occupied { background-color: red; } 
+		</style>
+		
+		<script>
+			const ws = new WebSocket('ws://localhost:3000');
+
+			ws.onmessage = (event) => {
+				const data = JSON.parse(event.data);
+				const seat = document.getElementById("seat1");
+			
+				if(data.seat == 1){
+					seat.className = "seat occupied";
+					seat.innerText = "점유됨"
+				} else {
+					seat.className = "seat empty";
+					seat.innerText = "빈 좌석"
+				}	
+			};
+		</script>
+	</head>
+
+	<body>
+		<h2>지하철 좌석 알림 시스템</h2>
+		<div class="seat-container">
+			<div id="seat1" class="seat empty">빈 좌석</div>
+		</div>
+	</body>
+</html>
