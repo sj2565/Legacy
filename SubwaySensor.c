@@ -13,6 +13,7 @@
 #define LED_GREEN 24
 #define TEMP 25
 #define MAX_TIMINGS 90 // DHT11센서는 LOW <-> HIGH 전환이 약85번 발생함
+#define FILE_PATH "/home/seojoon/nodetest/sensor_data.csv"
 
 // 40비트 데이터 (5바이트)
 int data[5] = {0, 0, 0, 0, 0};
@@ -137,6 +138,16 @@ float GetTemperature()
         return temperature;
     }
 }
+void SaveData(float distance, float temperature){
+	FILE *file = fopen(FILE_PATH, "a");
+	if (file == NULL) {
+		fprintf(stderr, "파일 열기 실패! \n");
+		return;
+	}
+	//fprintf(stderr, "SaveData() 호출! : %.2f, %.2f\n" ,distance ,temperature);
+	fprintf(file, "%.2f, %.2f\n" ,distance ,temperature);
+	fclose(file);
+}
 
 int main()
 {
@@ -148,7 +159,9 @@ int main()
 		
         float distance = GetDistance();
         float temperature = GetTemperature();
-
+       
+        SaveData(distance, temperature); // 파일 저장 
+        
 		// 디버깅 메세지로 출력, 버퍼로 인해 printf문으로 사용할 시 같이 Node로 넘어가기에 오류가 발생함
 		// 터미널에서 stderr 로그 출력
         fprintf(stderr, "Distance : %.2f cm | Temperature : %.1f \n", distance, temperature);

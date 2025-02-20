@@ -18,14 +18,21 @@
 			ws.onmessage = (event) => {
 				const data = JSON.parse(event.data);
 				const seat = document.getElementById("seat1");
-			
-				if(data.seat == 1){
+				
+				if(data.status == "anomaly") {
+					seat.className = "seat anomaly";
+					seat.innerText = "센서값 이상 감지";
+					alert("이상 행동 감지! 관리자에게 보고");
+				} else if(data.seat == 1) {
 					seat.className = "seat occupied";
 					seat.innerText = "점유됨"
 				} else {
 					seat.className = "seat empty";
 					seat.innerText = "빈 좌석"
-				}	
+				}
+				// 콘솔에서 기본 모델과 튜닝 모델 결과 비교 가능
+				console.log("기본 모델 예측 : " ,data.default_model); 
+				console.log("튜닝 모델 예측 : " ,data.tuned_model);	
 			};
 		</script>
 	</head>
