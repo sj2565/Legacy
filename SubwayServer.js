@@ -8,37 +8,20 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({server});
 
-
-
-
-
-
-//const aiScriptPath = path.resolve(__dirname, "SubwayAiTest.py");
-//console.log(`실행할 AI모델 경로 : ${aiScriptPath}`);
-
-
-
 const sensorProcess = spawn("./SubwaySensor"); // C언어 
 const aiProcess = spawn("python3" ,["SubwayAiTest.py"], {encoding : "utf8"}); // AI 모델 실행
-
-//const sensorData = JSON.stringify({distance : 15, tmperature : 30});
-//console.log("AI 모델에 보낼 데이터 : " ,sensorData);
-//console.log("데이터 타입 : ", typeof sensorData);
-//aiProcess.stdin.write(sensorData + "\n");
-aiProcess.stdin.end();
-
 
 sensorProcess.stdout.on("data", (data) => {
 	const messages = data.toString().trim().split("\n"); // 여러 개의 메세지가 한번에 들어올 경우 처리
 	messages.forEach((message) => {
-		//console.log("C에서 넘어온 데이터 : " ,message);
-	
+		console.log("C에서 넘어온 데이터 : " ,message);
 		try {
-			const seatData = JSON.parse(message);
-			console.log('Node에서 받은 데이터 : ' ,seatData);
+			const sensorData = JSON.parse(message); // 센서 데이터 JSON으로 파싱
+			console.log('Node에서 받은 데이터 : ' ,sensorData);
 			
-			aiProcess.stdin.write(JSON.stringify(seatData) + "\n"); // AI Process로 데이터 전달
+			aiProcess.stdin.write(JSON.stringify(sensorData) + "\n"); // AI Process로 데이터 전달
 			
+			// 웹 클라이언트에도 데이터 전송
 			wss.clients.forEach(client => {
 				if (client.readyState == WebSocket.OPEN) {
 					client.send(JSON.stringify(seatData));

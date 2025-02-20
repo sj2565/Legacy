@@ -162,18 +162,11 @@ int main()
        
         SaveData(distance, temperature); // 파일 저장 
         
-		// 디버깅 메세지로 출력, 버퍼로 인해 printf문으로 사용할 시 같이 Node로 넘어가기에 오류가 발생함
-		// 터미널에서 stderr 로그 출력
-        fprintf(stderr, "Distance : %.2f cm | Temperature : %.1f \n", distance, temperature);
-        
-        // 센서 데이터값 0과1로 표현
-        int seat_data = (distance < 20.0 && temperature > 30.0) ? 1 : 0;
-        
-        // Node에서 실시간으로 읽을 수 있게 설정
-        printf("{\"seat\" : %d}\n", seat_data); // JSON
+		// 거리 및 온도 데이터 JSON 형식으로 출력
+        printf("{\"distance\" : %.2f, \"temperature\" : %.1f}\n", distance, temperature);
         fflush(stdout);     // 버퍼를 즉시 비우면서 출력을 강제로 수행 -> printf문 전부 출력
 
-        if (seat_data == 1)
+        if (distance < 20.0 && temperature > 30.0)
         {
             digitalWrite(LED_RED, HIGH);
             digitalWrite(LED_GREEN, LOW);
