@@ -37,7 +37,7 @@ void SetUp()
 {
     if (wiringPiSetupGpio() == -1)
     {
-        printf("wiringPi 초기화 실패 \n");
+        fprintf(stderr, "wiringPi 초기화 실패 \n");
         exit(1);
     }
     pinMode(TRIG, OUTPUT);
@@ -46,7 +46,7 @@ void SetUp()
     pinMode(LED_GREEN, OUTPUT);
 
     digitalWrite(TRIG, LOW);
-    printf("초음파 센서 및 온도 센서 준비 완료 \n");
+    fprintf(stderr, "초음파 센서 및 온도 센서 준비 완료 \n");
 
     signal(SIGINT, CleanUp);
 }
@@ -80,7 +80,9 @@ float GetTemperature()
     int j = 0;
     float temperature;
     int retry_count = 0;
-
+	
+	static float last_valid_temp = 25.0; // 마지막 정상 값을 저장할 변수
+	
     data[0] = data[1] = data[2] = data[3] = data[4] = 0;
 	
 	// 요청 신호 보내기
@@ -122,13 +124,18 @@ float GetTemperature()
     if ((j >= 40) && (data[4] == ((data[0] + data[1] + data[2] + data[3]) & 0xFF)))
     {
         temperature = data[2] + data[3] * 0.1;
+        
+        // 비정상적인 값 필터링
+        if (temperature > 20 && temperature < 40)
+        {
+			last_valid_temp = temperature;
+		}
+		else
+		{
+			return last_valid_temp;
+        }
         return temperature;
     }
-    /*else
-    {
-        printf("센서값 데이터 읽기 실패 \n");
-        return -1.0;
-    }*/
 }
 
 int main()

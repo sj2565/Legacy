@@ -10,21 +10,23 @@ const wss = new WebSocket.Server({server});
 const sensorProcess = spawn("./SubwaySensor");
 
 sensorProcess.stdout.on("data", (data) => {
-	const message = data.toString().trim();
-	console.log("C에서 넘어온 data : ", message);
+	const messages = data.toString().trim().split("\n"); // 여러 개의 메세지가 하번에 들어올 경우 처리
+	messages.forEach((message) => {
+		console.log("C에서 넘어온 data : ", message);
 	
-	try {
-		const seatData = JSON.parse(message);
-		//console.log('받은 데이터 : ', seatData);
+		try {
+			const seatData = JSON.parse(message);
+			console.log('Node에서 받은 데이터 : ', seatData);
 		
-		wss.clients.forEach(client => {
-			if (client.readyState == WebSocket.OPEN) {
-				client.send(JSON.stringify(seatData));
-			}
-		});
-	} catch (error) {
-		console.error("JSON 파싱 오류 발생 : ", error);
-	}
+			wss.clients.forEach(client => {
+				if (client.readyState == WebSocket.OPEN) {
+					client.send(JSON.stringify(seatData));
+				}
+			});
+		} catch (error) {
+			console.error("JSON 파싱 오류 발생 : ", error);
+		}
+	});
 });
 
 /* stderr 출력 (디버깅용, WebSocket으로는 전송 안 함)
