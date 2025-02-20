@@ -1,46 +1,114 @@
 <!DOCTYPE html>
 <html lang="ko">
-	<head>
-		<meta charset="UTF-8">
-		<title>지하철 좌석 알림</title>
-		<style>
-			body {font-family: Arial, sans-serif; text-align: center;}
-			.seat-container {display: flex; justify-content: center; gap: 10px; margin-top: 20px;}
-			.seat {width: 100px; height: 100px; border-radius: 10px; font-size: 18px; 
-			display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;}
-            .empty { background-color: green; }
-            .occupied { background-color: red; } 
-		</style>
-		
-		<script>
-			const ws = new WebSocket("ws://localhost:3000");
+<head>
+    <meta charset="UTF-8">
+    <title>지하철 좌석 알림 시스템</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        h2 {
+            color: #333;
+        }
+        .status-container {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #555;
+        }
+        .seat-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .seat {
+            width: 120px;
+            height: 120px;
+            border-radius: 15px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            transition: background 0.5s;
+        }
+        .empty { background-color: green; }
+        .occupied { background-color: red; }
+        .anomaly { background-color: orange; } /* 이상 감지 시 주황색 */
+        .info-box {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            font-size: 18px;
+            color: #333;
+        }
+        .ws-status {
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 5px;
+            display: inline-block;
+            border-radius: 5px;
+        }
+        .ws-connected { background: green; color: white; }
+        .ws-disconnected { background: red; color: white; }
+    </style>
 
-			ws.onmessage = (event) => {
-				const data = JSON.parse(event.data);
-				const seat = document.getElementById("seat1");
-				
-				if(data.status == "anomaly") {
-					seat.className = "seat anomaly";
-					seat.innerText = "센서값 이상 감지";
-					alert("이상 행동 감지! 관리자에게 보고");
-				} else if(data.seat == 1) {
-					seat.className = "seat occupied";
-					seat.innerText = "점유됨"
-				} else {
-					seat.className = "seat empty";
-					seat.innerText = "빈 좌석"
-				}
-				// 콘솔에서 기본 모델과 튜닝 모델 결과 비교 가능
-				console.log("기본 모델 예측 : " ,data.default_model); 
-				console.log("튜닝 모델 예측 : " ,data.tuned_model);	
-			};
-		</script>
-	</head>
+    <script>
+        const ws = new WebSocket("ws://localhost:3000");
 
-	<body>
-		<h2>지하철 좌석 알림 시스템</h2>
-		<div class="seat-container">
-			<div id="seat1" class="seat empty">빈 좌석</div>
-		</div>
-	</body>
+        ws.onopen = () => {
+            document.getElementById("ws-status").innerText = "연결됨";
+            document.getElementById("ws-status").className = "ws-status ws-connected";
+        };
+
+        ws.onclose = () => {
+            document.getElementById("ws-status").innerText = "연결 끊김";
+            document.getElementById("ws-status").className = "ws-status ws-disconnected";
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const seat = document.getElementById("seat1");
+            const tempDisplay = document.getElementById("temperature");
+            const distDisplay = document.getElementById("distance");
+
+            tempDisplay.innerText = `온도 : ${data.temperature.toFixed(1)} C`;
+            distDisplay.innerText = `거리 : ${data.distance.toFixed(2)} cm`;
+
+            if (data.status === "anomaly") {
+                seat.className = "seat anomaly";
+                seat.innerText = "센서 이상 감지";
+            } else if (data.seat === 1) {
+                seat.className = "seat occupied";
+                seat.innerText = "점유됨";
+            } else {
+                seat.className = "seat empty";
+                seat.innerText = "빈 좌석";
+            }
+
+            console.log("AI 분석 결과:", data);
+        };
+    </script>
+</head>
+
+<body>
+    <h2>지하철 좌석 알림 시스템</h2>
+    <div class="ws-status ws-disconnected" id="ws-status">연결 상태 확인 중...</div>
+
+    <div class="seat-container">
+        <div id="seat1" class="seat empty">빈 좌석</div>
+    </div>
+
+    <div class="info-box">
+        <p id="temperature">온도 : - C</p>
+        <p id="distance">거리 : - cm</p>
+    </div>
+</body>
 </html>

@@ -9,12 +9,12 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({server});
 
 const sensorProcess = spawn("./SubwaySensor"); // C언어 
-const aiProcess = spawn("python3" ,["SubwayAiTest.py"], {encoding : "utf8"}); // AI 모델 실행
+const aiProcess = spawn("python3" ,["SubwayML.py"]); // AI 모델 실행
 
 sensorProcess.stdout.on("data", (data) => {
 	const messages = data.toString().trim().split("\n"); // 여러 개의 메세지가 한번에 들어올 경우 처리
 	messages.forEach((message) => {
-		console.log("C에서 넘어온 데이터 : " ,message);
+		//console.log("C에서 넘어온 데이터 : " ,message);
 		try {
 			const sensorData = JSON.parse(message); // 센서 데이터 JSON으로 파싱
 			console.log('Node에서 받은 데이터 : ' ,sensorData);
@@ -24,7 +24,7 @@ sensorProcess.stdout.on("data", (data) => {
 			// 웹 클라이언트에도 데이터 전송
 			wss.clients.forEach(client => {
 				if (client.readyState == WebSocket.OPEN) {
-					client.send(JSON.stringify(seatData));
+					client.send(JSON.stringify(sensorData));
 				}
 			});
 		} catch (error) {
@@ -42,6 +42,7 @@ aiProcess.stdout.on("data", (data) => {
 		try {
 			const result = JSON.parse(message);
 			console.log("AI 분석 결과 (처리 후) : " ,result);
+			console.log("====================================================================================")
 			
 			// 웹 클라이언트로 전송
 			wss.clients.forEach(client => {
@@ -51,7 +52,7 @@ aiProcess.stdout.on("data", (data) => {
 			});
 		} catch (error) {
 			console.error("AI 결과 JSON 파싱 오류 발생 : " ,error);
-			console.error("AI 프로세스 출력 원본 데이터 : " ,message);
+			console.error("AI 프로세스 출력 원본 데이터 : " ,message);		
 		}
 	});
 });
