@@ -7,8 +7,8 @@ from scipy import stats
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import MinMaxScaler
 
-#print("AI 모델 실행됨! (CSV 기반 초기 학습 시작)", file=sys.stderr)
-print("AI 모델 실행됨! (실시간 이상 탐지 학습 시작)", file=sys.stderr)
+#print("AI 모델 실행됨! (CSV 기반 초기 학습 시작, 튜닝 X)", file=sys.stderr)
+print("AI 모델 실행됨! (실시간 이상 탐지 학습 시작, 튜닝 O)", file=sys.stderr)
 
 # CSV 파일 로드
 file_path = "sensor_data.csv"
@@ -42,14 +42,14 @@ print(original_anomalies)
 df.interpolate(method="linear", inplace=True) # 선형 보간(데이터 흐름 유지)
 df.fillna(df.mean(), inplace=True) # 평균값으로 NaN값 보정
 
-# 이상값 제거 (Z-Score)
-z_scores = np.abs(stats.zscore(df))
-df = df[(z_scores < 3).all(axis=1)] # Z-score가 3이상인 값 제거
+# 이상값 제거 (Z-Score) 너무 많이 제거하면 학습 범위가 좁아짐 => 정상값도 이상인식 => 완화하거나 해제
+#z_scores = np.abs(stats.zscore(df))
+#df = df[(z_scores < 4).all(axis=1)] # Z-score가 4이상인 값 제거
 
 # 데이터 정규화
 scaler = MinMaxScaler()
 scaler.fit(df[["distance", "temperature"]]) # 최소값과 최대값을 찾아서 transform에 적용 => 실시간 데이터는 CSV 데이터의 최소/최대 값을 기준으로 변환
-df[["distance", "temperature"]] = scaler.fit_transform(df[["distance", "temperature"]])
+df[["distance", "temperature"]] = scaler.transform(df[["distance", "temperature"]])
 
 # 이동 평균(SMA) 추가로 인한 노이즈 완화)
 #df["sma_distance"] = df["distance"].rolling(window=3).mean()
@@ -58,17 +58,17 @@ df[["distance", "temperature"]] = scaler.fit_transform(df[["distance", "temperat
 # Sliding Window 적용 (과거 데이터 반영)
 df["prev_distance_1"] = df["distance"].shift(1)
 df["prev_temp_1"] = df["temperature"].shift(1)
-
 df.dropna(inplace=True)  # NaN값 제거
 
 # 최종 데이터 
-training_data = df.to_numpy()
+training_data = df.to_numpy() # (n_sample, 4) => distance, temperature, prev_dis, prev_temp
+#print(training_data)
 
 # AI 모델 학습
-model = IsolationForest(n_estimators=100,	# 트리 개수 증가
-        contamination=0.05,					# 이상값 비율 낮춤 (더 민감)
+model = IsolationForest(n_estimators=200,	# 트리 개수 증가
+        contamination=0.01,					# 이상값 비율 낮춤 (더 민감)
         max_samples="auto",					# 트리 샘플 크기 설정
-        max_features=2,						# 특징 수(거리, 온도)
+        max_features=4,						# 특징 수(거리, 온도, 이전 거리, 이전 온도)
         random_state=42)					# 재현 가능성 유지
 model.fit(training_data)
 
@@ -109,23 +109,23 @@ while True:
         z_scores_distance = (distance - df["distance"].mean()) / std_distance
         z_scores_temperature = (temperature - df["temperature"].mean()) / std_temperature
        
-        if abs(z_scores_distance) > 3.0 or abs(z_scores_temperature) > 3.0:
+        if abs(z_scores_distance) > 4.0 or abs(z_scores_temperature) > 4.0:
             anomaly_flag = True
         else:
             anomaly_flag = False
 		
-        # 정규화 작업 실시              
-        new_data = np.array([[distance, temperature]])
-        #new_data = scaler.transform(new_data)
+        # 정규화 작업 실시, 위에 데이터 전처리 과정이랑 일관성 갖기, scaler.fit() 재호출 X              
+        new_data_2d = np.array([[distance, temperature]])
+        new_data_2d = scaler.transform(new_data_2d)
 		
-        #  Sliding Window 적용
+        #  Sliding Window 적용, 학습 시와 실시간 시 동일 차원으로 맞추기 
         if "prev_distance" not in locals():
             prev_distance, prev_temperature = distance, temperature # 초기값 설정
-        new_data = np.array([[distance, temperature, prev_distance, prev_temperature]])
-        prev_distance, prev_temperature = distance, temperature # 이전 값 업데이트
+        new_data_4d= np.array([[new_data_2d[0, 0], new_data_2d[0, 1], prev_distance, prev_temperature]])
+        prev_distance, prev_temperature = new_data_2d[0, 0], new_data_2d[0, 1] # 이전 값 업데이트
 
         # 모델 예측 수행
-        prediction = model.predict(new_data)
+        prediction = model.predict(new_data_4d)
         result = "normal" if prediction[0] == 1 else "anomaly"
 		
         output = json.dumps({

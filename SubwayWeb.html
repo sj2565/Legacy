@@ -82,10 +82,10 @@
             tempDisplay.innerText = `온도 : ${data.temperature.toFixed(1)} C`;
             distDisplay.innerText = `거리 : ${data.distance.toFixed(2)} cm`;
 
-            if (data.status === "anomaly") {
+            if (data.status == "anomaly") {
                 seat.className = "seat anomaly";
                 seat.innerText = "센서 이상 감지";
-            } else if (data.seat === 1) {
+            } else if (data.distance < 20.0 && data.temperature > 30.0) {
                 seat.className = "seat occupied";
                 seat.innerText = "점유됨";
             } else {

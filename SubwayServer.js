@@ -43,7 +43,7 @@ aiProcess.stdout.on("data", (data) => {
 			const result = JSON.parse(message);
 			console.log("AI 분석 결과 (처리 후) : " ,result);
 			console.log("====================================================================================")
-			
+		
 			// 웹 클라이언트로 전송
 			wss.clients.forEach(client => {
 				if (client.readyState == WebSocket.OPEN) {
