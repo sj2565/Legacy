@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <wiringPi.h>
+#include <wiringPiSPI.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -11,12 +12,10 @@
 #define ECHO 27
 #define LED_RED 23
 #define LED_GREEN 24
-#define TEMP 25
-#define MAX_TIMINGS 90 // DHT11센서는 LOW <-> HIGH 전환이 약85번 발생함
+#define SPI_CHANNEL 0  // SPI 채널 (CEO 사용)
+#define SPI_SPEED 1000000  // 1MHz 속도
+#define LM35_CHANNEL 0  // MCP3008의 0번 채널 사용
 #define FILE_PATH "/home/seojoon/nodetest/sensor_data.csv"
-
-// 40비트 데이터 (5바이트)
-int data[5] = {0, 0, 0, 0, 0};
 
 // GPIO Reset
 void CleanUp(int signum)
@@ -28,17 +27,16 @@ void CleanUp(int signum)
     pinMode(ECHO, INPUT);
     pinMode(LED_RED, INPUT);
     pinMode(LED_GREEN, INPUT);
-    pinMode(TEMP, INPUT);
 
     printf("센서 안전하게 종료! \n");
     exit(0);
 }
 
+// 핀출력 설정
 void SetUp()
 {
-    if (wiringPiSetupGpio() == -1)
-    {
-        fprintf(stderr, "wiringPi 초기화 실패 \n");
+	if (wiringPiSetupGpio() == -1 || wiringPiSPISetup(SPI_CHANNEL, SPI_SPEED) == -1) {
+        fprintf(stderr, "SPI 초기화  or wiringPi 초기화 실패!\n");
         exit(1);
     }
     pinMode(TRIG, OUTPUT);
@@ -74,70 +72,30 @@ float GetDistance()
     return distance;
 }
 
-float GetTemperature()
-{
-    int last_state = HIGH;
-    int counter = 0;
-    int j = 0;
-    float temperature;
-    int retry_count = 0;
+float GetTemperature(){
+	uint8_t buffer[3];
+    int adc_value;
+    float voltage, temperature;
 	
-	static float last_valid_temp = 25.0; // 마지막 정상 값을 저장할 변수
-	
-    data[0] = data[1] = data[2] = data[3] = data[4] = 0;
-	
-	// 요청 신호 보내기
-	pinMode(TEMP, OUTPUT);
-	digitalWrite(TEMP, LOW); 
-    delay(20);	// 센서를 사용하기 위해 20ms 동안 LOW신호 보냄
-    digitalWrite(TEMP, HIGH);
-	delayMicroseconds(40);  // HIGH 상태를 40마이크로초 동안 유지
+	buffer[0] = 1; // MCP3008 시작 비트
+    buffer[1] = (8 + LM35_CHANNEL) << 4; // 채널 선택
+    buffer[2] = 0;
     
-    // 데이터 수신 준비 (INPUT모드로 변경)
-    pinMode(TEMP, INPUT);
+    wiringPiSPIDataRW(SPI_CHANNEL, buffer, 3);
+    
+     // 10비트 ADC 값 변환
+    adc_value = ((buffer[1] & 3) << 8) + buffer[2];
 
-    for (int i = 0; i < MAX_TIMINGS; i++)
-    {
-        counter = 0;
-        while (digitalRead(TEMP) == last_state) // 신호가 바뀔 때까지 대기
-        {
-            counter++; // 신호가 변경되지 않는 동안 카운트 증가
-            delayMicroseconds(1);
-            if (counter == 255)
-            {
-                break; // 255 마이크로초 이상 기다리면 타임아웃
-            }
-        }
-        last_state = digitalRead(TEMP); // 현재 상태 업데이트
+    // 전압 변환 (3.3V 기준)
+    voltage = (adc_value * 3.3) / 1023.0;
 
-		// HIGH 신호의 길이로 0/1을 구분
-        if ((i >= 4) && (i % 2 == 0))
-        {
-            data[j / 8] <<= 1; // 기존 데이터 왼쪽으로 쉬프트
-            if (counter > 50) // HIGH 신호가 50마이크로 이상이면 1, 아니면 0
-            {
-                data[j / 8] |= 1;
-            }
-            j++;
-        }
-    }
-    // 패리티 체크
-    if ((j >= 40) && (data[4] == ((data[0] + data[1] + data[2] + data[3]) & 0xFF)))
-    {
-        temperature = data[2] + data[3] * 0.1;
-        
-        // 비정상적인 값 필터링
-        if (temperature > 20 && temperature < 40)
-        {
-			last_valid_temp = temperature;
-		}
-		else
-		{
-			return last_valid_temp;
-        }
-        return temperature;
-    }
+    // 온도 변환 (LM35는 10mV/C)
+    temperature = voltage * 100.0;
+
+    return temperature;
 }
+
+// 데이터 파일 저장
 void SaveData(float distance, float temperature){
 	FILE *file = fopen(FILE_PATH, "a");
 	if (file == NULL) {
