@@ -36,6 +36,20 @@ model.fit(training_data)
 
 print("AI 모델 실행됨", file=sys.stderr)
 
+while True:
+    line = sys.stdin.readline().strip()  
+    if not line:
+        continue  
+
+    print(f"받은 원본 데이터 : {repr(line)}", file=sys.stderr)
+
+    try:
+        data = json.loads(line)
+        print(f"JSON 변환된 데이터 : {data}", file=sys.stderr)
+
+    except Exception as e:
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+
 # Node.js에서 실시간 데이터 입력 받기 
 for line in sys.stdin:
     try:

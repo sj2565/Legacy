@@ -15,7 +15,7 @@
 #define SPI_CHANNEL 0  // SPI 채널 (CEO 사용)
 #define SPI_SPEED 1000000  // 1MHz 속도
 #define LM35_CHANNEL 0  // MCP3008의 0번 채널 사용
-#define FILE_PATH "/home/seojoon/nodetest/sensor_data.csv"
+//#define FILE_PATH "/home/seojoon/nodetest/sensor_data.csv"
 
 // GPIO Reset
 void CleanUp(int signum)
@@ -96,6 +96,7 @@ float GetTemperature(){
 }
 
 // 데이터 파일 저장
+/*
 void SaveData(float distance, float temperature){
 	FILE *file = fopen(FILE_PATH, "a");
 	if (file == NULL) {
@@ -105,7 +106,7 @@ void SaveData(float distance, float temperature){
 	//fprintf(stderr, "SaveData() 호출! : %.2f, %.2f\n" ,distance ,temperature);
 	fprintf(file, "%.2f, %.2f\n" ,distance ,temperature);
 	fclose(file);
-}
+} */
 
 int main()
 {
@@ -118,7 +119,7 @@ int main()
         float distance = GetDistance();
         float temperature = GetTemperature();
        
-        SaveData(distance, temperature); // 파일 저장 
+        //SaveData(distance, temperature); // 파일 저장 
         
 		// 거리 및 온도 데이터 JSON 형식으로 출력
         printf("{\"distance\" : %.2f, \"temperature\" : %.1f}\n", distance, temperature);
