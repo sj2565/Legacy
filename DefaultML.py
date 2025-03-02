@@ -8,13 +8,13 @@ from sklearn.ensemble import IsolationForest
 print("AI 모델 실행됨! (CSV 기반 초기 학습 + 실시간 분석 시작)", file=sys.stderr)
 
 file_path = "sensor_data.csv"
-df = pd.read_csv(file_path, names=["distance", "temperature"], header=None)
+df = pd.read_csv(file_path, names=["distance", "temperature", "pressure"], header=None)
 training_data = df.to_numpy()
 
 model = IsolationForest(n_estimators=200,	
         contamination=0.05,					
         max_samples=256,					
-        max_features=2,						
+        max_features=3,						
         random_state=42)					
 model.fit(training_data)
 '''
@@ -38,15 +38,17 @@ while True:
         data = json.loads(line)
         distance = data["distance"]
         temperature = data["temperature"]
+        pressure = data["pressure"]
 
-        new_data = np.array([[distance, temperature]])
+        new_data = np.array([[distance, temperature, pressure]])
         prediction = model.predict(new_data)
         result = "normal" if prediction[0] == 1 else "anomaly"
 
         output = json.dumps({
             "status": result,
             "distance": distance,
-            "temperature": temperature
+            "temperature": temperature,
+            "pressure": pressure
         })
         print(output)
         sys.stdout.flush()
